@@ -12,7 +12,7 @@ WORKDIR /app
 # Install system dependencies required for OpenCV, PyTorch, and YOLOv8
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
@@ -20,9 +20,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy the requirements file into the container
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install PyTorch CPU version first to prevent downloading huge CUDA versions (saves space/memory on CPU Space)
 RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+    pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining Python dependencies
+RUN pip install -r requirements.txt
+
 
 # Copy the rest of the application code into the container
 COPY . .
