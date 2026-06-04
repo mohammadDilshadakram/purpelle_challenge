@@ -12,3 +12,10 @@ ultralytics>=8.2.0        # YOLOv8 deep learning framework
 opencv-python>=4.9.0      # Image & video processing
 boxmot>=10.0.0            # ByteTrack multi-object tracking
 numpy>=1.24.0             # Fast numerical arrays for coordinates and frames
+
+# Dashboard Frontend
+streamlit>=1.30.0
+pandas>=2.0.0
+altair>=5.0.0
+requests>=2.31.0
+

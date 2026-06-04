@@ -1,3 +1,14 @@
+---
+title: Store Intelligence Dashboard
+emoji: 🛍️
+colorFrom: indigo
+colorTo: purple
+sdk: streamlit
+sdk_version: 1.58.0
+app_file: dashboard/app.py
+pinned: false
+---
+
 # Store Intelligence System
 
 An end-to-end, AI-powered Store Intelligence System that processes CCTV video feeds to generate real-time retail insights, customer conversion funnels, occupancy analytics, and operational anomaly detection. Developed for the **Purplle Tech Challenge 2026**.
