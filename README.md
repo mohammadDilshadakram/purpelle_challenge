@@ -3,9 +3,7 @@ title: Store Intelligence Dashboard
 emoji: 🛍️
 colorFrom: indigo
 colorTo: purple
-sdk: streamlit
-sdk_version: 1.58.0
-app_file: dashboard/app.py
+sdk: docker
 pinned: false
 ---
 

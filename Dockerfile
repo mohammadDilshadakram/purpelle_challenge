@@ -4,8 +4,7 @@ FROM python:3.10-slim
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PORT=8000
+    PIP_NO_CACHE_DIR=1
 
 # Set the working directory in the container
 WORKDIR /app
@@ -28,9 +27,12 @@ RUN pip install --upgrade pip && \
 # Copy the rest of the application code into the container
 COPY . .
 
-# Expose ports for FastAPI (8000) and Streamlit (8501)
-EXPOSE 8000
-EXPOSE 8501
+# Expose port for Hugging Face Spaces / Streamlit
+EXPOSE 7860
 
-# Default command (can be overridden in docker-compose)
-CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Make start.sh script executable
+RUN chmod +x start.sh
+
+# Run start.sh script to start both API and Streamlit
+CMD ["./start.sh"]
+
