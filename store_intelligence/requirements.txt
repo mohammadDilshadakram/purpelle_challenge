@@ -1,0 +1,17 @@
+# Store Intelligence System — Phase 1 & 2 Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core inference (Phase 1)
+ultralytics>=8.2.0        # YOLOv8 (includes torch dependency)
+
+# Computer vision
+opencv-python>=4.9.0      # Video I/O and annotation
+
+# Multi-object tracking (Phase 2)
+boxmot>=10.0.0            # ByteTrack (and other trackers: StrongSORT, DeepOCSORT …)
+numpy>=1.24.0             # Array operations for tracker I/O
+
+# FastAPI Backend Dependencies
+fastapi>=0.100.0
+uvicorn>=0.22.0
+sqlalchemy>=2.0.0

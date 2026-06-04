@@ -1,0 +1,14 @@
+# Store Intelligence System — Root Dependencies
+
+# FastAPI Web Backend
+fastapi>=0.100.0
+uvicorn>=0.22.0
+sqlalchemy>=2.0.0
+pydantic>=2.0.0
+httpx>=0.24.0            # Used for backend endpoint integration testing
+
+# Core Computer Vision & Multi-Object Tracking (Phase 1-5 Modules)
+ultralytics>=8.2.0        # YOLOv8 deep learning framework
+opencv-python>=4.9.0      # Image & video processing
+boxmot>=10.0.0            # ByteTrack multi-object tracking
+numpy>=1.24.0             # Fast numerical arrays for coordinates and frames

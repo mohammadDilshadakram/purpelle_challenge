@@ -1,0 +1,212 @@
+"""
+Store Intelligence System — FastAPI Web Backend Entrypoint
+Registers endpoints, supports API versioning, configures middleware, and manages database lifecycles.
+"""
+
+from __future__ import annotations
+
+import logging
+from contextlib import asynccontextmanager
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
+from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
+
+from app.database import Base, SessionLocal, engine, get_db
+from app.schemas import (
+    AnomaliesResponse,
+    FunnelResponse,
+    HealthResponse,
+    MetricsResponse,
+    OccupancyResponse,
+    VisitorAnalyticsResponse,
+)
+from app.services.store import StoreService
+
+# ---------------------------------------------------------------------------
+# Logging Configuration
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("store_intelligence.api")
+
+
+# ---------------------------------------------------------------------------
+# Lifespan Events
+# ---------------------------------------------------------------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handles startup database initialization and synchronization."""
+    logger.info("Lifespan startup: Initializing database tables...")
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        logger.error("Failed to initialize database tables: %s", e, exc_info=True)
+
+    logger.info("Lifespan startup: Syncing store intelligence log data...")
+    db = SessionLocal()
+    try:
+        # Force database synchronization on startup to pre-load all JSON records
+        StoreService.sync_data(db, force=True)
+    except Exception as e:
+        logger.error("Startup database synchronization failed: %s", e, exc_info=True)
+    finally:
+        db.close()
+
+    yield
+    logger.info("Lifespan shutdown: Cleaning up resources...")
+
+
+# ---------------------------------------------------------------------------
+# FastAPI Application Declaration
+# ---------------------------------------------------------------------------
+app = FastAPI(
+    title="Store Intelligence API",
+    description=(
+        "Production-ready FastAPI backend for the Store Intelligence System. "
+        "Exposes store metrics, occupancy timeline, visitor details, checkout funnels, "
+        "and operational anomaly detection feeds."
+    ),
+    version="1.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
+)
+
+
+# ---------------------------------------------------------------------------
+# Custom Exception Handlers
+# ---------------------------------------------------------------------------
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc: HTTPException):
+    """Format HTTPExceptions cleanly for the client."""
+    logger.error("HTTP error [%d]: %s", exc.status_code, exc.detail)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request, exc: Exception):
+    """Catch-all for unhandled exceptions to return a clean 500 error."""
+    logger.error("Unhandled Exception encountered: %s", exc, exc_info=True)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "An internal server error occurred."},
+    )
+
+
+# ---------------------------------------------------------------------------
+# APIRouter Definitions (Versioned Endpoints)
+# ---------------------------------------------------------------------------
+api_router = APIRouter()
+
+
+@api_router.get("/health", response_model=HealthResponse, tags=["System Status"])
+def get_health():
+    """
+    Endpoint 1: GET /health
+    Returns health status and version information.
+    """
+    logger.info("Health check endpoint accessed.")
+    return {"status": "healthy", "version": "1.0"}
+
+
+@api_router.get("/metrics", response_model=MetricsResponse, tags=["Store Metrics"])
+def get_metrics(db: Session = Depends(get_db)):
+    """
+    Endpoint 2: GET /metrics
+    Returns visitor KPIs, traffic stats, and stay durations.
+    """
+    logger.info("Fetching store metrics...")
+    try:
+        return StoreService.get_metrics(db)
+    except Exception as e:
+        logger.error("Error retrieving store metrics: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving store metrics from database.",
+        )
+
+
+@api_router.get("/funnel", response_model=FunnelResponse, tags=["Analytics Funnel"])
+def get_funnel():
+    """
+    Endpoint 3: GET /funnel
+    Returns funnel metrics generated by funnel.py.
+    """
+    logger.info("Fetching visitor funnel statistics...")
+    try:
+        return StoreService.get_funnel()
+    except Exception as e:
+        logger.error("Error retrieving funnel metrics: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving visitor conversion funnel metrics.",
+        )
+
+
+@api_router.get("/anomalies", response_model=AnomaliesResponse, tags=["Security & Operations"])
+def get_anomalies_list(db: Session = Depends(get_db)):
+    """
+    Endpoint 4: GET /anomalies
+    Returns anomaly summary statistics along with the full anomaly list.
+    """
+    logger.info("Fetching detected anomalies...")
+    try:
+        return StoreService.get_anomalies(db)
+    except Exception as e:
+        logger.error("Error retrieving anomalies: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving operational anomalies.",
+        )
+
+
+@api_router.get("/occupancy", response_model=OccupancyResponse, tags=["Store Metrics"])
+def get_occupancy(db: Session = Depends(get_db)):
+    """
+    Endpoint 5: GET /occupancy
+    Returns store occupancy levels mapped over time.
+    """
+    logger.info("Fetching store occupancy timeline...")
+    try:
+        timeline = StoreService.get_occupancy(db)
+        return {"timeline": timeline}
+    except Exception as e:
+        logger.error("Error retrieving occupancy: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving store occupancy timeline.",
+        )
+
+
+@api_router.get("/visitors", response_model=VisitorAnalyticsResponse, tags=["Store Metrics"])
+def get_visitors(db: Session = Depends(get_db)):
+    """
+    Endpoint 6: GET /visitors
+    Returns details on active store visitors, visit durations, and visitor frequency.
+    """
+    logger.info("Fetching visitor details...")
+    try:
+        return StoreService.get_visitors(db)
+    except Exception as e:
+        logger.error("Error retrieving visitors: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving visitor analytics.",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Mount Versioned and Non-Versioned Routes
+# ---------------------------------------------------------------------------
+# Versioned routes (/api/v1/health, /api/v1/metrics, etc.)
+app.include_router(api_router, prefix="/api/v1")
+# Versioned routes (/v1/health, /v1/metrics, etc.)
+app.include_router(api_router, prefix="/v1")
+# Root/Legacy routes for test suite backwards compatibility (/health, /metrics, etc.)
+app.include_router(api_router, prefix="")
